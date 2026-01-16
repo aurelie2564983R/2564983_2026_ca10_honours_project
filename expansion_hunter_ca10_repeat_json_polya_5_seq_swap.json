@@ -1,0 +1,8 @@
+[
+	{
+		"LocusId": "CA10",
+		"LocusStructure": "(AAAAAG|AAAA)(CAG)*(A|C)(A)*",
+		"ReferenceRegion": ["chr17:51831663-51831669", "chr17:51831670-51831732", "chr17:51831733-51831734", "chr17:51831734-51831737"],
+		"VariantType": ["SmallVariant", "Repeat", "SmallVariant", "Repeat"]
+	}
+]

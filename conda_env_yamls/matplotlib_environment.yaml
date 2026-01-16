@@ -1,0 +1,6 @@
+name: matplotlib
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+prefix: /users/2564983r/.conda/envs/matplotlib

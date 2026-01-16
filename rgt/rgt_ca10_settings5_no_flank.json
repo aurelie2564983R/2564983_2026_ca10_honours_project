@@ -1,0 +1,29 @@
+{
+
+	"repeat_units": ["CAG", "CAC", "CAT", "CCG", "CGG"],
+
+	"unique_repeat_units":["CAG"],
+
+	"grouping_repeat_units":["CAG","CAA"],
+
+	"min_size_repeate": 5,
+
+	"max_interrupt_tract": 3,
+
+	"discard_reads_with_no_end_flank": "False",
+
+	"discarded_reads_flag_percentage": 10,
+
+	"reverse_strand":"False",
+
+	"minimum_no_of_reads": 30,
+
+	"3D_plot_parameters":{
+		"x_units":["CAG"],
+                "z_units":["CAA"],
+                "before_x_seq":"",
+                "after_x_seq":"CAACAG",
+                "before_z_seq":"CCGCCA",
+                "after_z_seq":"CCT"
+        }
+}
