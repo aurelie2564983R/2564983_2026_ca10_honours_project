@@ -7,7 +7,7 @@
 #SBATCH --output=%x-%j.out      # output file name will contain job name + job ID
 #SBATCH --error=%x-%j.err       # error file name will contain job name + job ID
 #SBATCH --partition=nodes        # which partition to use, default on MARS is “nodes"
-#SBATCH --time=0-08:00:00       # time limit for the whole run, in the form of d-hh:mm:ss, also accepts mm, mm:ss, hh:mm:ss, d-hh, d-hh:mm
+#SBATCH --time=0-00:10:00       # time limit for the whole run, in the form of d-hh:mm:ss, also accepts mm, mm:ss, hh:mm:ss, d-hh, d-hh:mm
 #SBATCH --mem=16G                # memory required per node, in the form of [num][M|G|T]
 #SBATCH --nodes=1               # number of nodes to allocate, default is 1
 #SBATCH --ntasks=1              # number of Slurm tasks to be launched, increase for multi-process runs ex. MPI
@@ -37,6 +37,8 @@ ref_seq="<path/to/reference>"
 
 region_of_interest="chr17:51821668-51841732"
 # region of genome in which SNPs should be analysed to build the tree
+
+
 
 
 conda activate phase_ont
@@ -99,15 +101,15 @@ do
 			if [ $allele1_hap1 -gt $allele1_hap2 -a $allele2_hap1 -lt $allele2_hap2 ]; then
 				echo Allele 1 is hap 1, allele 2 is hap 2
 				
-				hap1_id="$allele_1_struc""_""$sample""_1"
-				hap2_id="$allele_2_struc""_""$sample""_2"
+				hap1_id="$allele_1_struc"" ""$sample""_1_""$rgt_allele_1_len"
+				hap2_id="$allele_2_struc""_""$sample""_2_""$rgt_allele_2_len"
 
 
 			elif [ $allele1_hap1 -lt $allele1_hap2 -a $allele2_hap1 -gt $allele2_hap2 ]; then
 				echo Allele 1 is hap 2, allele 2 is hap 1
 
-				hap1_id="$allele_2_struc""_""$sample""_2"
-				hap2_id="$allele_1_struc""_""$sample""_1"
+				hap1_id="$allele_2_struc""_""$sample""_2_""$rgt_allele_2_len"
+				hap2_id="$allele_1_struc""_""$sample""_1_""$rgt_allele_1_len"
 			else
 				hap1_id="ERROR"
 				hap2_id="ERROR"
@@ -242,6 +244,8 @@ grep -v "ERROR" "$out_dir""/roi_all_snps_haploid.csv" > "$out_dir""/roi_all_snps
 conda deactivate
 
 
+
+
 # make tree using scikit
 echo Making Tree
 
@@ -265,14 +269,13 @@ from omniplot import plot as op
 df = pd.read_csv("$in_csv")
 
 
-# for the allele labels only keep the allele structure information (remove sample ID and allele number)
-df.iloc[:, 0]= df.iloc[:, 0].str.replace('_.*$', '', regex=True)
-
-#df.iloc[:, 0]= df.iloc[:, 0].str.replace('*', '', regex=True)
+# for the allele labels only keep the allele length information
 
 X = df.iloc[:,3:]
 Z = sch.linkage(X, method='ward')
-labels = df['Allele Label'].tolist()
+length = df['Allele Label'].str.replace(r'^.*_', '', regex=True)
+length = np.asarray(length)
+length = pd.to_numeric(length)
 superpop = df['Superpopulation'].tolist()
 interruption = df['Interruption'].tolist()
 
@@ -280,7 +283,6 @@ interruption = df['Interruption'].tolist()
 
 # count how many times the interruptions occur
 
-# find how often each interruption occurs
 
 interruptions=("CAT","CAT[CAG]1CAC","CCG","CGG")
 
@@ -347,6 +349,12 @@ interruption_num_color_map = {
 }
 
 
+
+# set up colourmap for total repeat length
+
+length_color_map=matplotlib.cm.get_cmap("Wistia", 145)
+
+
 # set up spacer colourmap
 
 spacer_color_map = {
@@ -355,19 +363,13 @@ spacer_color_map = {
 
 
 colors = {
-	"Spacer": [spacer_color_map[x] for x in labels],
 	"Number of Interruptions": [interruption_num_color_map[x] for x in interruption_num],
-	"Interruption": [interruption_color_map[x] for x in interruption],
-	"Superpopulation": [superpopulation_color_map[x] for x in superpop]
+	"Interruption": [interruption_color_map[x] for x in interruption]
 }
 
 
 colorlabels_legend = {
 
-    "Spacer": {
-	"colors": list(spacer_color_map.values()),
-	"labels": list(spacer_color_map.keys())
-	},
     "Number of Interruptions": {
         "colors": list(interruption_num_color_map.values()),
         "labels": list(interruption_num_color_map.keys())
@@ -375,12 +377,77 @@ colorlabels_legend = {
     "Interruption": {
         "colors": list(interruption_color_map.values()),
         "labels": list(interruption_color_map.keys())
+    }
+}
+
+
+sample_classes = {
+    "Number of Interruptions": interruption_num,
+    "Interruption": interruption
+}
+
+
+
+
+# create plot
+
+X = X.astype(float)
+
+
+
+rt.plot(
+    dend,
+    sample_classes=sample_classes,
+    colorlabels=colors,
+    colorlabels_legend=colorlabels_legend,
+    figsize=(20, 8)
+)
+
+
+
+
+plt.savefig('$out_dir/20kb_roi_allele_evolution_denodrogram_interruptions.png',dpi=300)
+plt.close()
+
+
+# create plot showing the superpopulation and the total repeat length
+
+
+length_norm = (length - length.min()) / (length.max() - length.min())
+repeat_length_colors = length_color_map(length_norm)
+
+
+colors = {
+	"Repeat Length": length_color_map((length - length.min()) / (length.max() - length.min())), 
+	"Superpopulation": [superpopulation_color_map[x] for x in superpop]
+}
+
+
+
+#plot colourbar for number of interruptions
+ax = plt.gca()
+norm = matplotlib.colors.Normalize(vmin=0, vmax=145)
+sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.Wistia, norm=norm)
+cbar = plt.colorbar(sm, ax=ax)
+cbar.set_label("Repeat Length")
+
+plt.savefig('$out_dir/20kb_roi_allele_evolution_denodrogram_len_colourbar.png')
+plt.close()
+
+
+colorlabels_legend = {
+
+    "Repeat Length": {
+	"colors": list(length_color_map(np.linspace(0, 1, 145))),
+        "labels": [str(i) for i in range(145)]
     },
     "Superpopulation": {
         "colors": list(superpopulation_color_map.values()),
         "labels": list(superpopulation_color_map.keys())
     }
 }
+
+
 
 
 sample_classes = {
@@ -393,12 +460,10 @@ sample_classes = {
 
 
 
+
 # create plot
 
 X = X.astype(float)
-
-
-
 
 
 
@@ -407,17 +472,14 @@ rt.plot(
     sample_classes=sample_classes,
     colorlabels=colors,
     colorlabels_legend=colorlabels_legend,
-    figsize=(100, 30)
+    figsize=(20, 8)
 )
 
 
 
 
-plt.savefig('$out_dir/20kb_roi_allele_evolution_denodrogram.png')
+plt.savefig('$out_dir/20kb_roi_allele_evolution_denodrogram_superpop_len.png',dpi=300)
 plt.close()
-
-
-
 
 
 
