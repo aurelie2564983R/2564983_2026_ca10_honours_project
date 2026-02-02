@@ -7,7 +7,7 @@
 #SBATCH --output=%x-%j.out      # output file name will contain job name + job ID
 #SBATCH --error=%x-%j.err       # error file name will contain job name + job ID
 #SBATCH --partition=nodes        # which partition to use, default on MARS is “nodes"
-#SBATCH --time=0-00:10:00       # time limit for the whole run, in the form of d-hh:mm:ss, also accepts mm, mm:ss, hh:mm:ss, d-hh, d-hh:mm
+#SBATCH --time=0-08:00:00       # time limit for the whole run, in the form of d-hh:mm:ss, also accepts mm, mm:ss, hh:mm:ss, d-hh, d-hh:mm
 #SBATCH --mem=16G                # memory required per node, in the form of [num][M|G|T]
 #SBATCH --nodes=1               # number of nodes to allocate, default is 1
 #SBATCH --ntasks=1              # number of Slurm tasks to be launched, increase for multi-process runs ex. MPI
@@ -37,7 +37,6 @@ ref_seq="<path/to/reference>"
 
 region_of_interest="chr17:51821668-51841732"
 # region of genome in which SNPs should be analysed to build the tree
-
 
 
 
@@ -245,7 +244,6 @@ conda deactivate
 
 
 
-
 # make tree using scikit
 echo Making Tree
 
@@ -269,7 +267,10 @@ from omniplot import plot as op
 df = pd.read_csv("$in_csv")
 
 
-# for the allele labels only keep the allele length information
+# for the allele labels only keep the allele structure information (remove sample ID and allele number)
+#df.iloc[:, 0]= df.iloc[:, 0].str.replace('.*_(.*)", "$1"', '', regex=True)
+
+
 
 X = df.iloc[:,3:]
 Z = sch.linkage(X, method='ward')
@@ -283,6 +284,7 @@ interruption = df['Interruption'].tolist()
 
 # count how many times the interruptions occur
 
+# find how often each interruption occurs
 
 interruptions=("CAT","CAT[CAG]1CAC","CCG","CGG")
 
@@ -309,11 +311,11 @@ dend = sch.dendrogram(Z, labels=labels, no_plot=True)
 
 
 interruption_color_map = {
-	'No Interruption': 'C0',
-	'CAT[CAG]1CAC': 'C1',
-	'[CAG]nCAT[CAG]n': 'C2',
-	'CGG': 'C3',
-	'CCG': 'C4'
+	'No Interruption': '#0000ff',
+	'CAT[CAG]1CAC': '#008000',
+	'[CAG]nCAT[CAG]n': '#00BEBE',
+	'CGG': '#d9b3ff',
+	'CCG': '#BC00BC'
 }
 
 superpopulation_color_map = {
@@ -352,7 +354,7 @@ interruption_num_color_map = {
 
 # set up colourmap for total repeat length
 
-length_color_map=matplotlib.cm.get_cmap("Wistia", 145)
+length_color_map=matplotlib.cm.get_cmap("gist_ncar", 145)
 
 
 # set up spacer colourmap
@@ -427,7 +429,7 @@ colors = {
 #plot colourbar for number of interruptions
 ax = plt.gca()
 norm = matplotlib.colors.Normalize(vmin=0, vmax=145)
-sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.Wistia, norm=norm)
+sm = matplotlib.cm.ScalarMappable(cmap=plt.cm.gist_ncar, norm=norm)
 cbar = plt.colorbar(sm, ax=ax)
 cbar.set_label("Repeat Length")
 
@@ -488,5 +490,7 @@ plt.close()
 EOF
 
 conda deactivate
+
+echo Finished processing all samples
 
 echo Finished processing all samples
