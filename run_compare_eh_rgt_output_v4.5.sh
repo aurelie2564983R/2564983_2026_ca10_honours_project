@@ -327,6 +327,7 @@ conda activate matplotlib
 csv_file=$out_dir"ca10_EH_samples_RGT_comparison_formatted.csv"
 #define path to the csv file that should be loaded in
 out_dir="$out_dir""_plots"
+#out_dir=$(echo ${out_dir::-1})
 ##file path to location where plots should be saved. should NOT end in a /
 
 
@@ -374,6 +375,96 @@ ax1.spines['right'].set_visible(False)
 plt.savefig('$out_dir/plots/EH_RGT_length_comparison.png')
 
 
+
+
+# graph showing proportion of unexpanded allele lengths
+
+df_match1=df[df['Same Length Allele 1'] == 'True']
+df_match1=df_match1['Allele 1 Length']
+df_match2=df[df['Same Length Allele 2'] == 'True']
+df_match2=df_match2['Allele 2 Length']
+df_mismatch1=df[df['Same Length Allele 1'] == 'False']
+df_mismatch1=df_mismatch1['Allele 1 Length']
+df_mismatch2=df[df['Same Length Allele 2'] == 'False']
+df_mismatch2=df_mismatch2['Allele 2 Length']
+
+
+
+df_match = df_match1.append(df_match2)
+df_mismatch = df_mismatch1.append(df_mismatch2)
+
+
+match = df_match.value_counts()
+mismatch = df_mismatch.value_counts()
+total = match.add(mismatch, fill_value=0)
+print(total)
+prop=match/(total)
+prop = prop.fillna(0)
+
+
+
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+#ax1.scatter(prop.index,prop, color='#B0B0B0')
+plt.plot(prop.index,prop, color='c')
+ax1.set_ylim(-0.05,1.05)
+ax1.set_xlim(0,70)
+z = np.polyfit(prop.index,prop, 2)
+p = np.poly1d(z)
+ax1.spines['top'].set_visible(False)
+ax1.spines['right'].set_visible(False)
+plt.xlabel("Short-Read Repeat Estimate (Number of Repeats)")
+plt.ylabel("Proportion of Correctly Matched Alleles")
+#plt.plot(prop.index, p(prop.index), color='c')
+
+plt.savefig('$out_dir/plots/EH_matches_line_graph.png')
+
+# count number of unexpanded alleles
+
+df_unexpanded1=df[df['Allele 1 Length'] < 35]
+df_unexpanded_match1=df_unexpanded1[df_unexpanded1['RGT Allele 1 Length'] < 35]
+df_unexpanded_mismatch1=df_unexpanded1[df_unexpanded1['RGT Allele 1 Length'] > 34]
+df_unexpanded2=df[df['Allele 2 Length'] < 35]
+df_unexpanded_match2=df_unexpanded2[df_unexpanded2['RGT Allele 2 Length'] < 35]
+df_unexpanded_mismatch2=df_unexpanded2[df_unexpanded2['RGT Allele 2 Length'] > 34]
+
+
+
+
+
+unexpanded_match=int(len(df_unexpanded_match1))+int(len(df_unexpanded_match2))
+unexpanded_mismatch=int(len(df_unexpanded_mismatch1))+int(len(df_unexpanded_mismatch2))
+
+
+
+df_expanded1=df[df['Allele 1 Length'] > 34]
+df_expanded_match1=df_expanded1[df_expanded1['RGT Allele 1 Length'] > 34]
+df_expanded_mismatch1=df_expanded1[df_expanded1['RGT Allele 1 Length'] < 35]
+df_expanded2=df[df['Allele 2 Length'] > 34]
+df_expanded_match2=df_expanded2[df_expanded2['RGT Allele 2 Length'] > 34]
+df_expanded_mismatch2=df_expanded2[df_expanded2['RGT Allele 2 Length'] < 35]
+
+
+expanded_match=int(len(df_expanded_match1))+int(len(df_expanded_match2))
+expanded_mismatch=int(len(df_expanded_mismatch1))+int(len(df_expanded_mismatch2))
+
+print("Number of correctly classified unexpanded alleles: ",unexpanded_match)
+print("Number of misclassified unexpanded alleles: ",unexpanded_mismatch)
+print(df_unexpanded_mismatch1[['Allele 1 Length','RGT Allele 1 Length']])
+print(df_unexpanded_mismatch2[['Allele 2 Length','RGT Allele 2 Length']])
+
+print("Number of correctly classified expanded alleles: ",expanded_match)
+print("Number of misclassified expanded alleles: ",expanded_mismatch)
+print(df_expanded_mismatch1[['Allele 1 Length','RGT Allele 1 Length']])
+print(df_expanded_mismatch2[['Allele 2 Length','RGT Allele 2 Length']])
+
+
+
+
+
+
+
+
 #Loop through every superpopulation and make summary graphs for each
 #define arrays
 het_per=[]
@@ -390,17 +481,25 @@ for x in superpops:
 	rgt_alleles=superpop_df['RGT Allele 1 Length'].append(superpop_df['RGT Allele 2 Length'])
 
 	#plot the number of EH and RGT alleles found for every length
-
-	fig = plt.figure()
+	fig = plt.figure(figsize=(12,2))
 	ax1 = fig.add_subplot(111)
 	binwidth = 1
-	plt.hist(eh_alleles, bins=range(0, 60 + binwidth, binwidth), histtype='barstacked', label='EH', color=colours[count])
-	plt.xlabel("Number of Repeats")
-	plt.ylabel("Number of Alleles")
-	plt.title(f'{x}')
+	plt.hist(eh_alleles, weights=np.ones(len(eh_alleles)) / len(eh_alleles), bins=range(0, 60 + binwidth, binwidth), histtype='barstacked', label='EH', color=colours[count])
+	#plt.xlabel("Number of Repeats")
+	#plt.ylabel("Number of Alleles")
+	#plt.title(f'{x}')
+	ax1.spines['top'].set_visible(False)
+	ax1.spines['right'].set_visible(False)
+	ax1.set_ylim(0,0.4)
 	plt.savefig(f'$out_dir/plots/{x}_EH_allele_histogram.png')
 
+	
 
+	# calculate expanded allele frequency
+	df_expanded=eh_alleles[eh_alleles > 34]
+	df_unexpanded=eh_alleles[eh_alleles < 35]
+	expanded_ratio=int(len(df_expanded))/(int(len(df_expanded))+int(len(df_unexpanded)))
+	print("Expanded EH allele frequency for ",x," is: ",expanded_ratio)
 	
 	fig = plt.figure()
 	ax1 = fig.add_subplot(111)
@@ -554,12 +653,20 @@ for x in superpops:
 		no_interruptions=no_interruptions[~no_interruptions['RGT Allele Structure'].str.contains(i)]
 	superpop_interrupted.insert(0, no_interruptions['RGT Allele Length'])
 
-	
+
 	#make a figure to show the lengths and the interruptions present
 	
+	
+
+	# calculate the weights for the histogram
+	data_arrays = [s.values for s in superpop_interrupted]
+	total_num = sum(len(d) for d in data_arrays)
+	weights = [np.ones(len(d)) / total_num for d in data_arrays]
+	colours = ['b','g','c','#8F5FBA','#BC00BC']
+
 	fig = plt.figure(figsize=(12,2))
 	ax1 = fig.add_subplot(111)
-	plt.hist(superpop_interrupted, bins=range(35, 150 + binwidth, binwidth), stacked=True)
+	plt.hist(superpop_interrupted, weights=weights, bins=range(0, 150 + binwidth, binwidth), stacked=True, color=colours)
 	binwidth = 1
 	ax1.spines['top'].set_visible(False)
 	ax1.yaxis.set_major_locator(MaxNLocator(integer=True))
@@ -567,7 +674,10 @@ for x in superpops:
 	plt.legend(['No Interruption', 'CAT[CAG]1CAC', '[CAG]nCAT[CAG]n', 'CGG', 'CCG'])
 	#plt.xlabel("Number of Repeats")
 	#plt.ylabel("Number of Alleles")
-	#ax1.set_xlim(35,150)
+	plt.yticks(fontsize=12)
+	plt.xticks(fontsize=12)
+	ax1.set_ylim(0,0.4)
+	ax1.set_xlim(0,150)
 	#plt.title(f'{x}')
 	plt.savefig(f'$out_dir/plots/{x}_rgt_allele_lengths_interruptions.png')
 	plt.close('all')	
