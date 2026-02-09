@@ -388,36 +388,32 @@ df_mismatch1=df_mismatch1['Allele 1 Length']
 df_mismatch2=df[df['Same Length Allele 2'] == 'False']
 df_mismatch2=df_mismatch2['Allele 2 Length']
 
-
-
 df_match = df_match1.append(df_match2)
 df_mismatch = df_mismatch1.append(df_mismatch2)
-
 
 match = df_match.value_counts()
 mismatch = df_mismatch.value_counts()
 total = match.add(mismatch, fill_value=0)
-print(total)
 prop=match/(total)
 prop = prop.fillna(0)
-
+misprop=1-prop
+misprop = misprop.fillna(0)
 
 
 fig = plt.figure()
 ax1 = fig.add_subplot(111)
-#ax1.scatter(prop.index,prop, color='#B0B0B0')
-plt.plot(prop.index,prop, color='c')
-ax1.set_ylim(-0.05,1.05)
+plt.bar(prop.index,prop, color='c')
+plt.bar(misprop.index,misprop, color='m', bottom=prop)
 ax1.set_xlim(0,70)
 z = np.polyfit(prop.index,prop, 2)
 p = np.poly1d(z)
+plt.legend(['Same Length', 'Different Length', 'No Data'], bbox_to_anchor=(1, 1))
 ax1.spines['top'].set_visible(False)
 ax1.spines['right'].set_visible(False)
 plt.xlabel("Short-Read Repeat Estimate (Number of Repeats)")
-plt.ylabel("Proportion of Correctly Matched Alleles")
-#plt.plot(prop.index, p(prop.index), color='c')
+plt.ylabel("Proportion of Alleles")
 
-plt.savefig('$out_dir/plots/EH_matches_line_graph.png')
+plt.savefig('$out_dir/plots/EH_matches_bar_graph.png', bbox_inches="tight")
 
 # count number of unexpanded alleles
 
